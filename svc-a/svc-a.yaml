@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-a
+  namespace: datadog-demo
+  labels:
+    app: service-a
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: service-a
+  template:
+    metadata:
+      labels:
+        app: service-a
+    spec:
+      containers:
+        - name: service-a
+          image: qcodelabsllc/service-a:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DD_AGENT_HOST
+              value: "datadog-agent"
+            - name: DD_ENV
+              value: "prod"
+            - name: DD_SERVICE
+              value: "service-a"
+            - name: DD_VERSION
+              value: "1.0.0"
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            - name: DD_TRACE_ANALYTICS_ENABLED
+              value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-a
+  namespace: datadog-demo
+spec:
+  type: LoadBalancer
+  selector:
+    app: service-a
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
