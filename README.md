@@ -1,16 +1,17 @@
-1. Datadog Setup
+# Datadog Service Dependency Setup
 
 To begin, you'll need a Datadog account. If you don't have one, sign up at Datadog's website. Once logged in, locate your API Key and Application Key:
 - `API Key`: Navigate to Organization Settings > API Keys. This key is used by the Datadog Agent to send metrics, logs, and traces to your Datadog account. 
 - `Application Key`: Navigate to Organization Settings > Application Keys. This key is used by certain Datadog APIs and client libraries for authentication. While not strictly required for basic ddtrace setup, it's good practice to be aware of its location for more advanced configurations.Keep these keys secure, as they grant access to your Datadog account.
 
-2. Kubernetes Agent InstallationThe Datadog Agent collects metrics, logs, and traces from your Kubernetes cluster and sends them to Datadog. We recommend using Helm for installation, as it's the most robust and recommended method.
+Kubernetes Agent InstallationThe Datadog Agent collects metrics, logs, and traces from your Kubernetes cluster and sends them to Datadog. We recommend using Helm for installation, as it's the most robust and recommended method.
 Prerequisites:
 - `kubectl` installed and configured to connect to your Kubernetes cluster. 
 - `helm` installed.
 
-Installation Steps:
-1. Add Datadog Helm Repository:
+## Installation Steps:
+
+**Add Datadog Helm Repository**:
 
 ```bash
 kubectl create namespace datadog
@@ -19,7 +20,7 @@ helm repo add datadog https://helm.datadoghq.com
 helm install datadog-operator datadog/datadog-operator
 ```
 
-2. Create a Kubernetes Secret for your Datadog API Key:
+**Create a Kubernetes Secret for your Datadog API Key**:
 
 Replace `<YOUR_DATADOG_API_KEY>` with your actual Datadog API Key.
 
@@ -27,7 +28,7 @@ Replace `<YOUR_DATADOG_API_KEY>` with your actual Datadog API Key.
 kubectl create secret generic datadog-secret --from-literal api-key=<YOUR_DATADOG_API_KEY>
 ```
 
-3. Install the Datadog Agent using Helm:
+**Install the Datadog Agent using Helm**:
 
 Follow instructions in the [Install the Datadog Agent on Kubernetes](https://us5.datadoghq.com/fleet/install-agent/latest?platform=kubernetes) to configure and update the Datadog Agent.
 Remember to check `Application Performance Monitoring` and optionally `Log Management` under `Customize your observability coverage` (i.e. Step 3).
@@ -36,14 +37,15 @@ datadog.apiKeyExistingSecret: References the Kubernetes Secret holding your Data
 
 You should see datadog-agent pods in a Running state.
 
-4. Python Microservices Instrumentation
+**Python Microservices Instrumentation**
 
 We'll instrument both the web-api and client-service using ddtrace. The provided GitHub repository (https://github.com/dennis-bilson-port/datadog-svc-dependency-setup-template.git) will serve as our base.
 Clone the Repository:git clone https://github.com/dennis-bilson-port/datadog-svc-dependency-setup-template.git
 cd datadog-svc-dependency-setup-template
 
 Modifications to requirements.txt:
-Add `ddtrace` to the `requirements.txt` file in both web-api and client-service directories.
+Add packages to the `requirements.txt` file in both web-api and client-service directories.
+
 web-api/requirements.txt:
 
 ```txt
@@ -61,15 +63,19 @@ ddtrace==1.18.1
 requests==2.31.0
 ```
 
-Instrumentation in main.py (Both Services):
+## Instrumentation in main.py (Both Services):
+
 The ddtrace library can automatically instrument many popular libraries and frameworks. 
 For FastAPI, the recommended way is to use ddtrace-run when starting your application. 
-This automatically patches the necessary components. However, to ensure proper service naming, environment, and version tagging, we'll leverage environment variables.
-web-api/main.py
+This automatically patches the necessary parts. However, to ensure proper service naming, environment, and version tagging, we'll leverage environment variables.
+
+### web-api/main.py
 No direct code changes are strictly necessary in main.py if you use ddtrace-run and set environment variables. 
 ddtrace will automatically instrument FastAPI and incoming HTTP requests.For outgoing requests (if web-api were to call another service), 
 ddtrace would also instrument the requests library automatically.client-service/main.pySimilarly, for client-service, ddtrace will automatically instrument 
-FastAPI for incoming requests and the requests library for outgoing HTTP calls to the web-api.Ensure your client-service/main.py makes an HTTP call to the web-api. For example:# client-service/main.py
+FastAPI for incoming requests and the requests library for outgoing HTTP calls to the web-api.Ensure your client-service/main.py makes an HTTP call to the web-api.
+
+### client-service/main.py
 
 ```python
 from fastapi import FastAPI
@@ -94,7 +100,8 @@ async def call_web_api():
         return {"error": f"Failed to call Web API: {e}"}
 ```
 
-Key ddtrace Environment Variables:
+**Key ddtrace Environment Variables**:
+
 These environment variables are crucial for ddtrace to function correctly and for unified service tagging:
 `DD_AGENT_HOST`: The hostname or IP address of the Datadog Agent's trace agent. In Kubernetes, this will typically be the Datadog Agent service name.
 `DD_TRACE_AGENT_PORT`: The port on which the trace agent listens to (default is 8126).
@@ -105,11 +112,11 @@ These environment variables are crucial for ddtrace to function correctly and fo
 `DD_TRACE_ENABLED`: Set to true to enable tracing.
 These will be passed via Kubernetes Deployment YAMLs.
 
-5. Dockerization
+## Dockerization
 
 We need to Dockerize both microservices. We'll use multi-stage builds for optimization.
 
-web-api/Dockerfile
+### web-api/Dockerfile
 
 ```Dockerfile
 # Stage 1: Builder
@@ -138,7 +145,7 @@ EXPOSE 8000
 CMD ["ddtrace-run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-client-service/Dockerfile
+### client-service/Dockerfile
 
 ```Dockerfile
 # Stage 1: Builder
@@ -167,7 +174,9 @@ EXPOSE 8001
 CMD ["ddtrace-run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
 ```
 
-Build Docker Images:From the root of your cloned repository:
+**Build Docker Images**:
+
+From the root of your cloned repository:
 
 ```bash
 docker build -t <docker-username>/web-api:latest -f web-api/Dockerfile .
@@ -185,7 +194,11 @@ eval $(minikube docker-env -u) # Unset Minikube's Docker environment
 
 For cloud providers, push these images to a container registry (e.g., Docker Hub, ECR, GCR) and update your Kubernetes manifests with the correct image paths.
 
-6. Kubernetes DeploymentCreate Kubernetes Deployment and Service YAML files for each microservice.kubernetes/web-api-deployment.yaml
+## Kubernetes Deployment
+
+Create Kubernetes Deployment and Service YAML files for each microservice.
+
+### kubernetes/web-api-deployment.yaml
 
 ```yaml
 apiVersion: apps/v1
@@ -239,7 +252,7 @@ spec:
       targetPort: 8000
 ```
 
-kubernetes/client-service-deployment.yaml
+### kubernetes/client-service-deployment.yaml
 
 ```yaml
 apiVersion: apps/v1
@@ -261,7 +274,7 @@ spec:
     spec:
       containers:
         - name: client-service
-          image: qcodelabsllc/client-service:latest
+          image: <docker-username>/client-service:latest
           ports:
             - containerPort: 8001
           env:
@@ -294,7 +307,10 @@ spec:
       port: 80
       targetPort: 8001
 ```
-Deploy to Kubernetes:From the kubernetes directory:
+
+**Deploy to Kubernetes**:
+
+From the kubernetes directory:
 
 ```bash
 kubectl apply -f web-api-deployment.yaml
@@ -309,7 +325,9 @@ kubectl get services
 kubectl get pods
 ```
 
-6. Testing Traces 
+**NB**: Restart the datadog agent deployments to make sure it picks the latest configuration.
+
+**Testing Traces**
 
 Now, let's generate some traffic to see traces in Datadog.
 If using Minikube:Port Forward the Client Service:
@@ -320,7 +338,7 @@ kubectl port-forward service/client-service 8001:80
 
 This will forward local port 8001 to the client-service pod's port 8001.
 
-Simulate Calls:
+**Simulate Calls**:
 Open a new terminal and use curl or Postman to hit the client-service endpoint that calls the web-api:
 
 ```bash
@@ -328,11 +346,10 @@ curl http://localhost:8001/call-api
 ```
 
 You should get a JSON response indicating the call to the Web API was successful.
-If using a Cloud Provider:
-Expose Client Service via LoadBalancer:
-Change the type of the client-service Kubernetes Service from ClusterIP to LoadBalancer.
+If using a Cloud Provider, then expose Client Service via LoadBalancer.
+Change the type of the client-service Kubernetes Service from `ClusterIP` to `LoadBalancer`.
 
-kubernetes/client-service-deployment.yaml (updated service type):
+### kubernetes/client-service-deployment.yaml (updated service type):
 
 ```yaml
 # ... (rest of the deployment) ...
@@ -364,7 +381,10 @@ Get LoadBalancer IP/Hostname:It might take a few minutes for the LoadBalancer to
 kubectl get services client-service
 ```
 
-Look for the EXTERNAL-IP or EXTERNAL-HOSTNAME.Simulate Calls:
+Look for the `EXTERNAL-IP` or `EXTERNAL-HOSTNAME`.
+
+**Simulate Calls**:
+
 Use curl or Postman with the external IP/hostname:
 
 ```bash
@@ -373,7 +393,7 @@ curl http://<EXTERNAL-IP-OR-HOSTNAME>:8001/call-api
 
 Repeat the curl command several times to generate multiple traces.
 
-8. Observing in Datadog
+**Observing in Datadog**
 
 Finally, let's verify that your traces are flowing into Datadog.
 - Log in to your Datadog account.
@@ -388,6 +408,6 @@ Finally, let's verify that your traces are flowing into Datadog.
 This comprehensive setup ensures that your Python microservices in Kubernetes are fully observable with Datadog APM, 
 providing valuable insights into their performance and interdependencies.
 
-Images:
+**Images**:
 - [Service Relationships](./images/relationships.png)
 - [Service Map](./images/service-map.png)
