@@ -10,11 +10,15 @@ DOCKER_USERNAME ?= qcodelabsllc
 # Service names
 SERVICE_A_NAME := service-a
 SERVICE_B_NAME := service-b
+SERVICE_C_NAME := service-c
+SERVICE_D_NAME := service-d
 
 # Image tags
 IMAGE_TAG ?= latest
 SERVICE_A_IMAGE := $(DOCKER_USERNAME)/$(SERVICE_A_NAME):$(IMAGE_TAG)
 SERVICE_B_IMAGE := $(DOCKER_USERNAME)/$(SERVICE_B_NAME):$(IMAGE_TAG)
+SERVICE_C_IMAGE := $(DOCKER_USERNAME)/$(SERVICE_C_NAME):$(IMAGE_TAG)
+SERVICE_D_IMAGE := $(DOCKER_USERNAME)/$(SERVICE_D_NAME):$(IMAGE_TAG)
 
 
 # ==============================================================================
@@ -27,10 +31,10 @@ SERVICE_B_IMAGE := $(DOCKER_USERNAME)/$(SERVICE_B_NAME):$(IMAGE_TAG)
 all: build push
 
 # Build all service images
-build: build-a build-b
+build: build-a build-b build-c build-d
 
 # Push all service images
-push: push-a push-b
+push: push-a push-b push-c push-d
 
 # Build the Docker image for Service A
 build-a:
@@ -44,6 +48,18 @@ build-b:
 	@docker build --platform=linux/amd64 -t $(SERVICE_B_IMAGE) ./svc-b
 	@echo "Successfully built $(SERVICE_B_IMAGE)"
 
+# Build the Docker image for Service C
+build-c:
+	@echo "Building Docker image for $(SERVICE_C_NAME)..."
+	@docker build --platform=linux/amd64 -t $(SERVICE_C_IMAGE) ./svc-b
+	@echo "Successfully built $(SERVICE_C_IMAGE)"
+
+# Build the Docker image for Service D
+build-d:
+	@echo "Building Docker image for $(SERVICE_D_IMAGE)..."
+	@docker build --platform=linux/amd64 -t $(SERVICE_D_IMAGE) ./svc-b
+	@echo "Successfully built $(SERVICE_D_IMAGE)"
+
 # Push the Docker image for Service A to the registry
 push-a:
 	@echo "Pushing $(SERVICE_A_IMAGE) to the registry..."
@@ -56,24 +72,23 @@ push-b:
 	@docker push $(SERVICE_B_IMAGE)
 	@echo "Successfully pushed $(SERVICE_B_IMAGE)"
 
+# Push the Docker image for Service C to the registry
+push-c:
+	@echo "Pushing $(SERVICE_C_IMAGE) to the registry..."
+	@docker push $(SERVICE_C_IMAGE)
+	@echo "Successfully pushed $(SERVICE_C_IMAGE)"
+
+# Push the Docker image for Service D to the registry
+push-d:
+	@echo "Pushing $(SERVICE_D_IMAGE) to the registry..."
+	@docker push $(SERVICE_D_IMAGE)
+	@echo "Successfully pushed $(SERVICE_D_IMAGE)"
+
 # Clean up Docker images (optional)
 clean:
 	@echo "Removing local Docker images..."
 	@docker rmi $(SERVICE_A_IMAGE) || true
 	@docker rmi $(SERVICE_B_IMAGE) || true
+	@docker rmi $(SERVICE_C_IMAGE) || true
+	@docker rmi $(SERVICE_D_IMAGE) || true
 	@echo "Cleanup complete."
-
-# List available commands
-help:
-	@echo "Available commands:"
-	@echo "  make build         - Build Docker images for all services"
-	@echo "  make push          - Push Docker images for all services to the registry"
-	@echo "  make all           - Build and push all images"
-	@echo "  make build-a       - Build the image for service-a"
-	@echo "  make push-a        - Push the image for service-a"
-	@echo "  make build-b       - Build the image for service-b"
-	@echo "  make push-b        - Push the image for service-b"
-	@echo "  make clean         - Remove the built Docker images locally"
-	@echo ""
-	@echo "You can override the Docker username and tag like this:"
-	@echo "  make DOCKER_USERNAME=myuser IMAGE_TAG=v1.1 all"
